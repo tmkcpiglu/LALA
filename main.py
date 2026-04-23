@@ -9,13 +9,14 @@ def ignite():
     thread_id = os.environ.get("TARGET_THREAD_ID")
     target_name = os.environ.get("TARGET_NAME", "TARGET")
     
+    # Exact pattern: (target) SAY P R V R daddy
     new_name = f"({target_name}) SAY P R V R daddy"
 
     if not session_raw or not thread_id:
         print("❌ Missing Secrets!")
         return
 
-    # Extract session_id
+    # Extract session_id for clean login
     session_id = session_raw
     if "sessionid=" in session_raw:
         match = re.search(r'sessionid=([^;]+)', session_raw)
@@ -28,15 +29,14 @@ def ignite():
         print("🚀 Booting Instagrapi Engine...")
         cl.login_by_sessionid(session_id)
         print(f"✅ Logged in as: {cl.username}")
-        print(f"📝 Target Thread: {thread_id}")
 
         # ⚡ THE MULTI-STRIKE LOGIC
-        # We try every known method name in the instagrapi library
+        # We include 'direct_thread_update_title' from your snippet
         methods = [
-            'direct_thread_edit_name',  # Current most common
-            'direct_thread_edit_title', # Alternative
-            'direct_thread_set_name',   # Legacy 1
-            'direct_thread_set_title'   # Legacy 2
+            'direct_thread_update_title', # Your newest method
+            'direct_thread_edit_name',    # Common mobile method
+            'direct_thread_edit_title',   # Common web method
+            'direct_thread_set_title'     # Legacy method
         ]
 
         success = False
@@ -45,6 +45,7 @@ def ignite():
                 print(f"🔄 Trying method: {method_name}...")
                 try:
                     method = getattr(cl, method_name)
+                    # Instagrapi methods return the thread object or True on success
                     if method(thread_id, new_name):
                         print(f"🔥 SUCCESS: Group name flipped using {method_name}!")
                         success = True
@@ -53,10 +54,10 @@ def ignite():
                     print(f"⚠️ {method_name} failed: {e}")
         
         if not success:
-            print("❌ All library methods failed. Check if your account is still in the group.")
+            print("❌ All methods failed. Your Thread ID might be invalid for this account.")
 
     except Exception as e:
-        print(f"❌ LOGIN OR SYSTEM ERROR: {e}")
+        print(f"❌ LOGIN ERROR: {e}")
 
 if __name__ == "__main__":
     sys.stdout.reconfigure(encoding='utf-8')
