@@ -1,62 +1,62 @@
 # -*- coding: utf-8 -*-
 import requests, os, re, sys, uuid
 
-def change_group_name_api():
+def change_name(thread_id, name, headers):
+    # Testing the V1 vs V2 endpoint logic
+    url = f"https://www.instagram.com/api/v1/direct_v2/threads/{thread_id}/set_title/"
+    payload = {
+        "title": name,
+        "client_context": str(uuid.uuid4()),
+        "uuid": str(uuid.uuid4())
+    }
+    return requests.post(url, data=payload, headers=headers)
+
+def ignite():
     raw_cookie = os.environ.get("INSTA_COOKIE", "")
-    thread_id = os.environ.get("TARGET_THREAD_ID", "")
+    thread_id = os.environ.get("TARGET_THREAD_ID", "").strip()
     target_name = os.environ.get("TARGET_NAME", "TARGET")
     new_name = f"({target_name}) SAY P R V R daddy"
 
-    if not raw_cookie or not thread_id:
-        print("❌ Missing Secrets.")
-        return
-
-    # Extracting session essentials
     sid = re.search(r'sessionid=([^;]+)', raw_cookie)
     csrf = re.search(r'csrftoken=([^;]+)', raw_cookie)
+    
     if not sid or not csrf:
-        print("❌ Cookie Error: sessionid or csrftoken missing.")
+        print("❌ Cookie Format Error.")
         return
 
     s_id, c_token = sid.group(1).strip(), csrf.group(1).strip()
-    
-    # Generate a unique client context (prevents 500 errors)
-    client_context = str(uuid.uuid4())
 
     headers = {
         "x-csrftoken": c_token,
         "x-ig-app-id": "936619743392459",
         "x-instagram-ajax": "1",
-        "x-requested-with": "XMLHttpRequest",
         "content-type": "application/x-www-form-urlencoded",
         "cookie": f"csrftoken={c_token}; sessionid={s_id};",
         "user-agent": "Mozilla/5.0 (iPhone; CPU OS 16_6 like Mac OS X) AppleWebKit/605.1.15",
-        "referer": f"https://www.instagram.com/direct/t/{thread_id}/"
+        "referer": "https://www.instagram.com/"
     }
 
-    # The "Universal Payload" - matches the exact format Meta expects
-    url = f"https://www.instagram.com/api/v1/direct_v2/threads/{thread_id}/set_title/"
-    payload = {
-        "title": new_name,
-        "client_context": client_context
-    }
-
-    print(f"🚀 Refiring API Strike on Thread: {thread_id}")
+    print(f"🚀 Refiring Strike on ID: {thread_id}")
     
-    try:
-        response = requests.post(url, data=payload, headers=headers)
+    response = change_name(thread_id, new_name, headers)
+    
+    if response.status_code == 200:
+        print(f"✅ SUCCESS: Name changed to {new_name}")
+    elif response.status_code == 500:
+        print("⚠️ Status 500 Detected. Retrying with Thread Mapping...")
+        # If the ID is a long numeric, try stripping any potential formatting
+        clean_id = re.sub(r'\D', '', thread_id)
+        if clean_id != thread_id:
+            response = change_name(clean_id, new_name, headers)
+            if response.status_code == 200:
+                print(f"✅ SUCCESS on Retry: Name changed.")
+                return
         
-        if response.status_code == 200:
-            print(f"✅ SUCCESS: Group name is now: {new_name}")
-        elif response.status_code == 500:
-            print("❌ STILL Status 500: Instagram is rejecting the Thread ID format.")
-            print("💡 FIX: Go to the group on your browser and double-check the ID in the URL.")
-        else:
-            print(f"❌ FAILED: {response.status_code} - {response.text[:100]}")
-
-    except Exception as e:
-        print(f"❌ ERROR: {e}")
+        print("❌ Still 500. This ID is likely restricted or ghosted by Meta.")
+        print("👉 ACTION: Open Group -> F12 -> Network -> Type something -> Find 'send_item' -> Copy 'thread_id' from Payload.")
+    else:
+        print(f"❌ Failed: {response.status_code} - {response.text[:150]}")
 
 if __name__ == "__main__":
     sys.stdout.reconfigure(encoding='utf-8')
-    change_group_name_api()
+    ignite()
