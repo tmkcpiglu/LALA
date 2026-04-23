@@ -40,7 +40,7 @@ async def run_tab(context, target_id, target_name):
                     if (box) {
                         const emoji = frames[frameIndex % frames.length];
                         
-                        // Stripped branding: (TARGET) 𝚂ᴀ𝚈 【﻿ＰＲＶ𝐑】 𝐃ᴀ𝐃𝐃𝐘
+                        // Refined branding: (TARGET) 𝚂ᴀ𝚈 【﻿ＰＲＶ𝐑】 𝐃ᴀ_𝐃_𝐃𝐘
                         const pattern = `(${tName}) 𝚂ᴀ𝚈 【﻿ＰＲＶ𝐑】 𝐃ᴀ𝐃𝐃𝐘 ~${emoji}`;
                         const fullBlock = Array(22).fill(pattern).join('\\n') + `\\n⚡ ID: ${Math.random().toString(36).substring(7)}`;
 
@@ -87,7 +87,6 @@ async def run_agent(agent_id, cookie, target_id, target_name):
             
             await context.close()
             gc.collect()
-            print(f"♻️ [Agent {agent_id}] Cycle Complete - RAM Purged.")
 
 async def main():
     cookie, t_id, t_name = os.environ.get("INSTA_COOKIE"), os.environ.get("TARGET_THREAD_ID"), os.environ.get("TARGET_NAME", "TARGET")
