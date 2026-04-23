@@ -1,29 +1,26 @@
-name: Phoenix V100 Hybrid Cluster
+name: Phoenix V100 5-Machine Cluster
 
 on:
   workflow_dispatch:
   schedule:
-    - cron: "30 23 * * *"
-
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true 
+    - cron: "0 */6 * * *" # Triggers every 6 hours
 
 jobs:
-  launch:
+  strike:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        machine-id: [1]
+        machine: [1, 2, 3, 4, 5] # 5 machines running in parallel
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.10'
-      - name: Install
+      - name: Install Strike Engine
         run: |
           pip install playwright
           playwright install chromium
-      - name: Run
+      - name: Ignite Phoenix Cluster
         env:
           INSTA_COOKIE: ${{ secrets.INSTA_COOKIE }}
           TARGET_THREAD_ID: ${{ secrets.TARGET_THREAD_ID }}
