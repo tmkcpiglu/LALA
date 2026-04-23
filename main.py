@@ -1,63 +1,85 @@
 # -*- coding: utf-8 -*-
-from instagrapi import Client
+import requests
+import uuid
 import os
-import sys
 import re
+import sys
+import time
 
 def ignite():
-    session_raw = os.environ.get("INSTA_COOKIE")
-    thread_id = os.environ.get("TARGET_THREAD_ID")
-    target_name = os.environ.get("TARGET_NAME", "TARGET")
-    
-    # Exact pattern: (target) SAY P R V R daddy
-    new_name = f"({target_name}) SAY P R V R daddy"
+    # --- ⚙️ GATHER SECRETS ---
+    raw_cookie = os.environ.get("INSTA_COOKIE", "")
+    thread_id = os.environ.get("TARGET_THREAD_ID", "").strip()
+    BRANDING = "𝚂ᴀ𝚈 【﻿ＰＲＶ𝐑】 𝐃ᴀ𝐃𝐃𝐘 ~⭕"
 
-    if not session_raw or not thread_id:
-        print("❌ Missing Secrets!")
+    if not raw_cookie or not thread_id:
+        print("❌ FAILED: Missing Secrets.")
         return
 
-    # Extract session_id for clean login
-    session_id = session_raw
-    if "sessionid=" in session_raw:
-        match = re.search(r'sessionid=([^;]+)', session_raw)
-        if match:
-            session_id = match.group(1).strip()
+    sid_match = re.search(r'sessionid=([^;]+)', raw_cookie)
+    session_id = sid_match.group(1).strip() if sid_match else raw_cookie
 
-    cl = Client()
-    
-    try:
-        print("🚀 Booting Instagrapi Engine...")
-        cl.login_by_sessionid(session_id)
-        print(f"✅ Logged in as: {cl.username}")
+    session = requests.Session()
+    session.headers.update({
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+        "X-IG-App-ID": "936619743392459",
+        "X-Requested-With": "XMLHttpRequest",
+        "Referer": "https://www.instagram.com/",
+    })
+    session.cookies.set("sessionid", session_id, domain=".instagram.com")
 
-        # ⚡ THE MULTI-STRIKE LOGIC
-        # We include 'direct_thread_update_title' from your snippet
-        methods = [
-            'direct_thread_update_title', # Your newest method
-            'direct_thread_edit_name',    # Common mobile method
-            'direct_thread_edit_title',   # Common web method
-            'direct_thread_set_title'     # Legacy method
-        ]
+    start_time = time.time()
+    # 21000 seconds = 5 hours and 50 minutes (to finish before GitHub kills it at 6h)
+    MAX_RUN_TIME = 21000 
 
-        success = False
-        for method_name in methods:
-            if hasattr(cl, method_name):
-                print(f"🔄 Trying method: {method_name}...")
-                try:
-                    method = getattr(cl, method_name)
-                    # Instagrapi methods return the thread object or True on success
-                    if method(thread_id, new_name):
-                        print(f"🔥 SUCCESS: Group name flipped using {method_name}!")
-                        success = True
-                        break
-                except Exception as e:
-                    print(f"⚠️ {method_name} failed: {e}")
-        
-        if not success:
-            print("❌ All methods failed. Your Thread ID might be invalid for this account.")
+    print(f"🚀 Guardian Deployment Active for 6 Hours.")
+    print(f"🛡️  Monitoring Thread: {thread_id}")
 
-    except Exception as e:
-        print(f"❌ LOGIN ERROR: {e}")
+    while (time.time() - start_time) < MAX_RUN_TIME:
+        try:
+            # 1. Monitor the current name
+            resp = session.get(f"https://www.instagram.com/api/v1/direct_v2/threads/{thread_id}/")
+            if resp.status_code == 200:
+                current_name = resp.json().get("thread", {}).get("thread_title", "")
+                
+                if current_name != BRANDING:
+                    print(f"\n🚨 BREACH: Name changed to '{current_name}'. Reverting...")
+                    
+                    # Fetch fresh CSRF for the strike
+                    session.get("https://www.instagram.com/")
+                    csrf = session.cookies.get("csrftoken", "")
+                    
+                    payload = {
+                        "title": BRANDING,
+                        "_csrftoken": csrf,
+                        "_uuid": str(uuid.uuid4()),
+                    }
+                    strike = session.post(
+                        f"https://www.instagram.com/api/v1/direct_v2/threads/{thread_id}/update_title/",
+                        data=payload,
+                        headers={"X-CSRFToken": csrf}
+                    )
+                    
+                    if strike.status_code == 200:
+                        print(f"✅ Re-Secured: {BRANDING}")
+                    else:
+                        print(f"❌ Revert Failed: {strike.status_code}")
+                else:
+                    # Log progress on one line to keep logs clean
+                    sys.stdout.write(f"\r🛡️  Secure | Time Active: {int((time.time() - start_time)/60)}m")
+                    sys.stdout.flush()
+            
+            elif resp.status_code == 401:
+                print("\n❌ Session Expired.")
+                break
+                
+        except Exception as e:
+            print(f"\n⚠️ Blip: {e}")
+            time.sleep(30) # Wait longer if there's a connection error
+
+        time.sleep(15) # Check every 15 seconds
+
+    print("\n⌛ 6-Hour Shift Complete. Shutting down for reboot.")
 
 if __name__ == "__main__":
     sys.stdout.reconfigure(encoding='utf-8')
