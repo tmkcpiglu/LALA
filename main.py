@@ -2,11 +2,11 @@
 import asyncio, os, sys, random, re, gc
 from playwright.async_api import async_playwright
 
-# --- ⚙️ V100 GITHUB CLUSTER CONFIG ---
+# --- ⚙️ V100 FORCE SETTINGS ---
 AGENTS_PER_MACHINE = 2    
 TABS_PER_AGENT = 2         
-PULSE_DELAY = 100         
-STRIKE_CYCLE_SEC = 90      # ⚡ Hard Reset every 90s for consistent 100ms speed
+PULSE_DELAY = 100          # ⚡ Locked at 100ms as requested
+STRIKE_CYCLE_SEC = 90      # ♻️ 90s Reset to prevent UI ghosting
 
 async def apply_stealth_overdrive(page):
     """iPad Pro Hardware Masking & Tracker Block"""
@@ -26,24 +26,27 @@ async def run_tab(context, target_id, target_name):
     try:
         await apply_stealth_overdrive(page)
         
-        # ⚡ EAGER LANDING
+        # ⚡ Navigate & Wait for UI Stability
         await page.goto(f"https://www.instagram.com/direct/t/{target_id}/", wait_until="commit", timeout=60000)
-        await asyncio.sleep(6) 
+        await asyncio.sleep(10) # Added buffer for GitHub Runner lag
         
-        # ⚡ CLEAN JS HYPER-ENGINE
+        # ⚡ FORCE-STRIKE JS ENGINE
         await page.evaluate("""
             ([tName, mDelay]) => {
                 const frames = ["⭕", "🌀", "🔴", "💠", "🧿", "🔘"];
                 let frameIndex = 0;
                 window.strikeTimer = setInterval(() => {
-                    const box = document.querySelector('div[role="textbox"], [contenteditable="true"]');
+                    // Aggressive Selector for iPad/Mobile UI
+                    const box = document.querySelector('div[aria-label="Message"], div[role="textbox"], [contenteditable="true"]');
                     if (box) {
                         const emoji = frames[frameIndex % frames.length];
-                        
-                        // Refined branding: (TARGET) 𝚂ᴀ𝚈 【﻿ＰＲＶ𝐑】 𝐃ᴀ_𝐃_𝐃𝐘
                         const pattern = `(${tName}) 𝚂ᴀ𝚈 【﻿ＰＲＶ𝐑】 𝐃ᴀ𝐃𝐃𝐘 ~${emoji}`;
-                        const fullBlock = Array(22).fill(pattern).join('\\n') + `\\n⚡ ID: ${Math.random().toString(36).substring(7)}`;
+                        const fullBlock = Array(20).fill(pattern).join('\\n') + `\\n⚡ ID: ${Math.random().toString(36).substring(7)}`;
 
+                        box.focus();
+                        // Re-trigger focus to wake up React handlers
+                        box.dispatchEvent(new Event('focus', { bubbles: true }));
+                        
                         document.execCommand('insertText', false, fullBlock);
                         box.dispatchEvent(new Event('input', { bubbles: true }));
                         
@@ -53,6 +56,7 @@ async def run_tab(context, target_id, target_name):
                         box.dispatchEvent(enter);
                         
                         frameIndex++; 
+                        // DOM Purge to keep speed high
                         setTimeout(() => { if(box.innerText.length > 0) box.innerHTML = ""; }, 5);
                     }
                 }, mDelay);
@@ -87,6 +91,7 @@ async def run_agent(agent_id, cookie, target_id, target_name):
             
             await context.close()
             gc.collect()
+            print(f"♻️ [Agent {agent_id}] Speed Purge Complete.")
 
 async def main():
     cookie, t_id, t_name = os.environ.get("INSTA_COOKIE"), os.environ.get("TARGET_THREAD_ID"), os.environ.get("TARGET_NAME", "TARGET")
